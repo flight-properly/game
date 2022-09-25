@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class AircraftController : MonoBehaviour {
+
 	public float velocity = 7;
 	public float yawSensitivity = 50;
 	public float pitchSensitivity = 150;

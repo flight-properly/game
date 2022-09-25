@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class CameraHandler : MonoBehaviour {
+	
 	public Transform target;
 
     void Start() {
