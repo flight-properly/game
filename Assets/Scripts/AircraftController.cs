@@ -4,51 +4,93 @@ using UnityEngine;
 
 public class AircraftController : MonoBehaviour {
 
+	public Rigidbody aircraftRigidbody;
 	public float minSpeed = 10.0f;
-	public float currentSpeed = 20.0f;
+	public float stallSpeed = 15.0f;
+	public float currentSpeed = 25.0f;
 	public float maxSpeed = 50.0f;
-	public float yawSensitivity = 50;
-	public float pitchSensitivity = 150;
-	public float rollSensitivity = 150;
-	public float movementSmoothness = 4;
-	public float gravity = 5;
+	public float yawSensitivity = 50.0f;
+	public float pitchSensitivity = 150.0f;
+	public float rollSensitivity = 150.0f;
+	public float movementSmoothness = 4.0f;
+	public float gravity = 5.0f;
+	public float accelerationDiff = 20.0f;
+	// +: Acceleration, 0: None, -: Deceleration
+	public float throttle = 0.0f;
+
 
 	private Vector3 currentRotation;
+	private bool isStall = false;
 
 	void Start() {
 	}
 
-	void Update() {
+	void FixedUpdate() {
 		float horizontalInput = Input.GetAxis("Horizontal");
 		float verticalInput = Input.GetAxis("Vertical");
-		handle(horizontalInput, verticalInput);
+		bool acceleration = Input.GetKey(KeyCode.Period);
+		bool deceleration = Input.GetKey(KeyCode.Comma);
+		throttle = acceleration ? +accelerationDiff : deceleration ? -accelerationDiff : 0;
+		HandleMovement(throttle, horizontalInput, verticalInput);
+		CanvasManager.getInstance().updateIsStallText(isStall);
 	}
 
-	void handle(float horizontalInput, float verticalInput) {
-		float pitch = -verticalInput * pitchSensitivity;
+	void HandleMovement(float throttle, float horizontalInput, float verticalInput) {
+		// Rotation
+		float pitch = verticalInput * pitchSensitivity;
 		float yaw = horizontalInput * yawSensitivity;
 		float roll = -horizontalInput * rollSensitivity;
 		Vector3 toRotate = new Vector3(pitch, yaw, roll);
-		currentRotation = Vector3.Lerp(currentRotation, toRotate, movementSmoothness * Time.deltaTime);
-		transform.Rotate(currentRotation * Time.deltaTime);
 
-		// 최대 / 최소 속력에 가까워 질 수록 변화율 0에 수렴
+		// Stall
+		if (currentSpeed <= stallSpeed) {
+			isStall = true;
+			// 지면 방향 향하는 rotation 값
+			Quaternion targetRotation = Quaternion.Euler(90, transform.eulerAngles.y, transform.eulerAngles.z);
+			// 현재 rotation 값과 targetRotation값의 차이
+			// cf. https://forum.unity.com/threads/subtracting-quaternions.317649/
+			Quaternion quaternionDiff = targetRotation * Quaternion.Inverse(transform.rotation);
+			
+			// 쿼터니언 값을 벡터로 변환
+			Vector3 vectorDiff = quaternionDiff.eulerAngles;
+
+			// 보정
+			if(vectorDiff.x > 180) vectorDiff.x -= 360;
+			if(vectorDiff.y > 180) vectorDiff.y -= 360;
+			if(vectorDiff.z > 180) vectorDiff.z -= 360;
+			vectorDiff.x = Mathf.Clamp(vectorDiff.x, -pitchSensitivity, pitchSensitivity);
+			vectorDiff.y = Mathf.Clamp(vectorDiff.y, -yawSensitivity, yawSensitivity);
+			vectorDiff.z = Mathf.Clamp(vectorDiff.z, -rollSensitivity, rollSensitivity);
+			toRotate = vectorDiff;
+		} else {
+			isStall = false;
+		}
+
+		currentRotation = Vector3.Lerp(currentRotation, toRotate, movementSmoothness * Time.fixedDeltaTime);
+
+		// 회전 적용
+		aircraftRigidbody.MoveRotation(aircraftRigidbody.rotation * Quaternion.Euler(currentRotation * Time.fixedDeltaTime));
+
+		// Speed
 		float changeRate = 1;
-		if (verticalInput > 0) changeRate = (maxSpeed - currentSpeed) / currentSpeed;
-		else changeRate = (currentSpeed - minSpeed) / currentSpeed;
-		currentSpeed += verticalInput * changeRate * Time.deltaTime;
-
 		// 피치값에 따른 중력 임의로 추가
 		float gravityBasedOnPitch = gravity * Mathf.Sin(transform.eulerAngles.x * Mathf.Deg2Rad);
-		currentSpeed += gravityBasedOnPitch * Time.deltaTime;
+		currentSpeed += gravityBasedOnPitch * Time.fixedDeltaTime;
 
-		// 가속
-		transform.Translate(Vector3.forward * currentSpeed * Time.deltaTime);
+		// 최대 / 최소 속력에 가까워 질수록 변화율 0에 수렴
+		if (throttle > 0) changeRate = (maxSpeed - currentSpeed) / currentSpeed;
+		else if (throttle < 0) changeRate = (currentSpeed - minSpeed) / currentSpeed;
 
-		CanvasManager.getInstance().updateVelocityText(currentSpeed);
+		currentSpeed += throttle * changeRate * Time.fixedDeltaTime;
+
+		// 가속 적용
+		aircraftRigidbody.velocity = transform.forward * currentSpeed;
+
+		CanvasManager.getInstance().updateSpeedMeterText(currentSpeed);
+		CanvasManager.getInstance().updateThrottleMeterText(throttle);
 	}
 
-	private void OnTriggerEnter(Collider other) {
-		Debug.Log(other.gameObject.name);
+	private void OnCollisionEnter(Collision target) {
+		Debug.Log("OnCollisionEnter: " + target.gameObject.name);
 	}
 }
