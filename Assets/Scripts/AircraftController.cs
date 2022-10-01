@@ -18,11 +18,14 @@ public class AircraftController : MonoBehaviour {
 	// +: Acceleration, 0: None, -: Deceleration
 	public float throttle = 0.0f;
 
-
 	private Vector3 currentRotation;
 	private bool isStall = false;
+	private Transform boosterObject;
 
 	void Start() {
+		boosterObject = transform.Find("Booster");
+		if (boosterObject == null) Debug.LogError("Could not find booster object.");
+		boosterObject.gameObject.SetActive(false);
 	}
 
 	void FixedUpdate() {
@@ -31,6 +34,8 @@ public class AircraftController : MonoBehaviour {
 		bool acceleration = Input.GetKey(KeyCode.Period);
 		bool deceleration = Input.GetKey(KeyCode.Comma);
 		throttle = acceleration ? +accelerationDiff : deceleration ? -accelerationDiff : 0;
+		if (throttle > 0) boosterObject.gameObject.SetActive(true);
+		else boosterObject.gameObject.SetActive(false);
 		HandleMovement(throttle, horizontalInput, verticalInput);
 		CanvasManager.getInstance().updateIsStallText(isStall);
 	}
@@ -92,5 +97,9 @@ public class AircraftController : MonoBehaviour {
 
 	private void OnCollisionEnter(Collision target) {
 		Debug.Log("OnCollisionEnter: " + target.gameObject.name);
+	}
+
+	private void OnTriggerEnter(Collider other) {
+		Debug.Log("OnTriggerEnter: " + other.tag);
 	}
 }
