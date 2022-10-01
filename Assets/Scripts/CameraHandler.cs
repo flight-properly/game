@@ -10,7 +10,6 @@ public class CameraHandler : MonoBehaviour {
 
 	void Start() {
 	}
-
  
 	// AircraftController에서 포지션 값 업데이트 후 카메라 업데이트
 	void LateUpdate() {

@@ -13,7 +13,8 @@ public class CanvasManager : MonoBehaviour {
 
 	[SerializeField] private Text speedMeterText;
 	[SerializeField] private Text throttleMeterText;
-	[SerializeField] private Text isStallText;
+	[SerializeField] private Text stallDisplayText;
+	[SerializeField] private Text gameStateText;
 
 	public void updateSpeedMeterText(float speed) {
 		speedMeterText.text = "Speed: " + speed;
@@ -23,8 +24,12 @@ public class CanvasManager : MonoBehaviour {
 		throttleMeterText.text = "Throttle: " + throttle;
 	}
 
-	public void updateIsStallText(bool isStall) {
-		isStallText.text = "Stall: " + isStall;
+	public void updateStallDisplayText(bool isStall) {
+		stallDisplayText.text = "Stall: " + isStall;
+	}
+
+	public void updateGameStateText(string gameState) {
+		gameStateText.text = "GameState: " + gameState;
 	}
 
 	void Start() {

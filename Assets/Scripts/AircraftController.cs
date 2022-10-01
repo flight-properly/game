@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof (Rigidbody))]
 public class AircraftController : MonoBehaviour {
 
 	public Rigidbody aircraftRigidbody;
@@ -23,6 +24,7 @@ public class AircraftController : MonoBehaviour {
 	private Transform boosterObject;
 
 	void Start() {
+		aircraftRigidbody = GetComponent<Rigidbody>();
 		boosterObject = transform.Find("Booster");
 		if (boosterObject == null) Debug.LogError("Could not find booster object.");
 		boosterObject.gameObject.SetActive(false);
@@ -37,7 +39,7 @@ public class AircraftController : MonoBehaviour {
 		if (throttle > 0) boosterObject.gameObject.SetActive(true);
 		else boosterObject.gameObject.SetActive(false);
 		HandleMovement(throttle, horizontalInput, verticalInput);
-		CanvasManager.getInstance().updateIsStallText(isStall);
+		CanvasManager.getInstance().updateStallDisplayText(isStall);
 	}
 
 	void HandleMovement(float throttle, float horizontalInput, float verticalInput) {
@@ -95,11 +97,8 @@ public class AircraftController : MonoBehaviour {
 		CanvasManager.getInstance().updateThrottleMeterText(throttle);
 	}
 
+	// 충돌 감지
 	private void OnCollisionEnter(Collision target) {
 		Debug.Log("OnCollisionEnter: " + target.gameObject.name);
-	}
-
-	private void OnTriggerEnter(Collider other) {
-		Debug.Log("OnTriggerEnter: " + other.tag);
 	}
 }
