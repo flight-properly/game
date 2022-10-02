@@ -5,12 +5,14 @@ using UnityEngine;
 public class GameManager : MonoBehaviour {
 
 	public Ring[] registeredRings;
+	public float timeLimit = 30;
 
 	private static GameManager instance;
 
 	private GameState state;
 	private int totalRingsCount = 0;
-	private int ringsPassed = 0;
+	private int passedRingsCount = 0;
+	private float timeElapsed = 0;
 
 	public static GameManager getInstance() {
 		return instance ?? FindObjectOfType<GameManager>();
@@ -25,27 +27,47 @@ public class GameManager : MonoBehaviour {
 	void Update() {
 		if (state == GameState.IDLE) return;
 
-		for (int i = 0; i < totalRingsCount; i++) {
-			if (registeredRings[i].hasPassed) ringsPassed += 1;
+		timeElapsed += Time.deltaTime;
+		for (int i = passedRingsCount; i < totalRingsCount; i++) {
+			if (registeredRings[i].hasPassed) {
+				passedRingsCount += 1;
+				registeredRings[i].gameObject.SetActive(false);
+			}
 		}
 
-		if (ringsPassed >= totalRingsCount) OverGame(GameOverCause.COMPLETE);
+		// 게임 오버 확인 순서
+		// 반드시 TimeLimit 조건 확인 후 링 조건 확인
+		if (timeElapsed >= timeLimit) overGame(GameOverCause.TIME_OVER);
+		if (passedRingsCount >= totalRingsCount) overGame(GameOverCause.COMPLETE);
 
 		CanvasManager.getInstance().updateGameStateText(state.ToString());
+		CanvasManager.getInstance().updateTimeDisplayText(timeElapsed);
+		CanvasManager.getInstance().updateRingsCountDisplayText(passedRingsCount, totalRingsCount);
 	}
 
-	void OverGame(GameOverCause cause) {
-		Debug.Log("OverGame called with cause: " + cause);
+	void overGame(GameOverCause cause) {
+		Debug.Log("overGame called with cause: " + cause);
 		switch (cause) {
 			case GameOverCause.TIME_OVER:
-				break;
-			case GameOverCause.CRASH:
 				break;
 			case GameOverCause.COMPLETE:
 				break;
 		}
 
+		AircraftController.getInstance().setControllable(false);
 		state = GameState.IDLE;
+	}
+
+	public Vector3 getLatestRingPosition() {
+		return passedRingsCount > 0 ? registeredRings[passedRingsCount - 1].transform.position : Vector3.zero;
+	}
+
+	public int getPassedRingsCount() {
+		return passedRingsCount;
+	}
+
+	public bool isGameRunning() {
+		return state == GameState.RUNNING;
 	}
 
 	enum GameState {
@@ -55,7 +77,6 @@ public class GameManager : MonoBehaviour {
 
 	enum GameOverCause {
 		TIME_OVER,
-		CRASH,
 		COMPLETE,
 	}
 }

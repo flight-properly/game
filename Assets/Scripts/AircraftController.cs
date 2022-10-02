@@ -8,6 +8,7 @@ public class AircraftController : MonoBehaviour {
 	public Rigidbody aircraftRigidbody;
 	public float minSpeed = 10.0f;
 	public float stallSpeed = 15.0f;
+	public float defaultSpeed = 25.0f;
 	public float currentSpeed = 25.0f;
 	public float maxSpeed = 50.0f;
 	public float yawSensitivity = 50.0f;
@@ -22,12 +23,21 @@ public class AircraftController : MonoBehaviour {
 	private Vector3 currentRotation;
 	private bool isStall = false;
 	private Transform boosterObject;
+	private Vector3 defaultSpawnPoint = new Vector3(500, 110, 500);
+	private bool isControllable = true;
+
+	private static AircraftController instance;
+
+	public static AircraftController getInstance() {
+		return instance ?? FindObjectOfType<AircraftController>();
+	}
 
 	void Start() {
 		aircraftRigidbody = GetComponent<Rigidbody>();
 		boosterObject = transform.Find("Booster");
 		if (boosterObject == null) Debug.LogError("Could not find booster object.");
 		boosterObject.gameObject.SetActive(false);
+		Debug.Log(GetComponent<MeshCollider>().bounds);
 	}
 
 	void FixedUpdate() {
@@ -36,13 +46,12 @@ public class AircraftController : MonoBehaviour {
 		bool acceleration = Input.GetKey(KeyCode.Period);
 		bool deceleration = Input.GetKey(KeyCode.Comma);
 		throttle = acceleration ? +accelerationDiff : deceleration ? -accelerationDiff : 0;
-		if (throttle > 0) boosterObject.gameObject.SetActive(true);
-		else boosterObject.gameObject.SetActive(false);
-		HandleMovement(throttle, horizontalInput, verticalInput);
+		handleMovement(throttle, horizontalInput, verticalInput);
 		CanvasManager.getInstance().updateStallDisplayText(isStall);
 	}
 
-	void HandleMovement(float throttle, float horizontalInput, float verticalInput) {
+	void handleMovement(float throttle, float horizontalInput, float verticalInput) {
+		if (!isControllable) return;
 		// Rotation
 		float pitch = verticalInput * pitchSensitivity;
 		float yaw = horizontalInput * yawSensitivity;
@@ -93,12 +102,30 @@ public class AircraftController : MonoBehaviour {
 		// 가속 적용
 		aircraftRigidbody.velocity = transform.forward * currentSpeed;
 
+		// Booster visual
+		if (throttle > 0) boosterObject.gameObject.SetActive(true);
+		else boosterObject.gameObject.SetActive(false);
+
 		CanvasManager.getInstance().updateSpeedMeterText(currentSpeed);
 		CanvasManager.getInstance().updateThrottleMeterText(throttle);
 	}
 
 	// 충돌 감지
 	private void OnCollisionEnter(Collision target) {
+		if (!GameManager.getInstance().isGameRunning()) return;
 		Debug.Log("OnCollisionEnter: " + target.gameObject.name);
+		// Reset player position
+		int passedRingsCount = GameManager.getInstance().getPassedRingsCount();
+		Vector3 latestRingPosition = GameManager.getInstance().getLatestRingPosition();
+		// TODO: replace const with actual aircraft size
+		transform.position = passedRingsCount > 0 ? latestRingPosition + (Vector3.left * 60) + (Vector3.up * 55 * transform.localScale.y) + (Vector3.forward * -100) : defaultSpawnPoint;
+		transform.rotation = Quaternion.identity;
+		aircraftRigidbody.Sleep();
+		currentSpeed = defaultSpeed;
+		aircraftRigidbody.velocity = Vector3.zero;
+	}
+
+	public void setControllable(bool option) {
+		isControllable = option;
 	}
 }
