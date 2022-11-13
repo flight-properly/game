@@ -37,10 +37,10 @@ public class AircraftController : MonoBehaviour {
 		boosterObject = transform.Find("Booster");
 		if (boosterObject == null) Debug.LogError("Could not find booster object.");
 		boosterObject.gameObject.SetActive(false);
-		Debug.Log(GetComponent<MeshCollider>().bounds);
 	}
 
 	void FixedUpdate() {
+		if (!isControllable) return;
 		float horizontalInput = Input.GetAxis("Horizontal");
 		float verticalInput = Input.GetAxis("Vertical");
 		bool acceleration = Input.GetKey(KeyCode.Period);
@@ -51,7 +51,6 @@ public class AircraftController : MonoBehaviour {
 	}
 
 	void handleMovement(float throttle, float horizontalInput, float verticalInput) {
-		if (!isControllable) return;
 		// Rotation
 		float pitch = verticalInput * pitchSensitivity;
 		float yaw = horizontalInput * yawSensitivity;
