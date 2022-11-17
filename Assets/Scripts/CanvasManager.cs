@@ -13,23 +13,19 @@ public class CanvasManager : MonoBehaviour {
 
 	[SerializeField] private Text speedMeterText;
 	[SerializeField] private Text throttleMeterText;
-	[SerializeField] private Text stallDisplayText;
 	[SerializeField] private Text gameStateText;
 	[SerializeField] private Text timeDisplayText;
 	[SerializeField] private Text totalRingsText;
 	[SerializeField] private Text currentRingsText;
 	[SerializeField] private Text gameOverUIDescriptionText;
+	[SerializeField] private Text countdownUIText;
 
 	public void updateSpeedMeterText(float speed) {
-		speedMeterText.text = "Speed: " + speed;
+		speedMeterText.text = speed.ToString("0.00");
 	}
 
 	public void updateThrottleMeterText(float throttle) {
 		throttleMeterText.text = "Throttle: " + throttle;
-	}
-
-	public void updateStallDisplayText(bool isStall) {
-		stallDisplayText.text = "Stall: " + isStall;
 	}
 
 	public void updateGameStateText(string gameState) {
@@ -50,6 +46,10 @@ public class CanvasManager : MonoBehaviour {
 
 	public void updateGameOverUIDescriptionText(string text) {
 		gameOverUIDescriptionText.text = text;
+	}
+
+	public void updateCountdownUIText(string text) {
+		countdownUIText.text = text;
 	}
 
 	void Start() {

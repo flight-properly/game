@@ -24,7 +24,7 @@ public class AircraftController : MonoBehaviour {
 	private bool isStall = false;
 	private Transform boosterObject;
 	private Vector3 defaultSpawnPoint = new Vector3(500, 110, 500);
-	private bool isControllable = true;
+	private bool isControllable = false;
 
 	private static AircraftController instance;
 
@@ -47,7 +47,6 @@ public class AircraftController : MonoBehaviour {
 		bool deceleration = Input.GetKey(KeyCode.Comma);
 		throttle = acceleration ? +accelerationDiff : deceleration ? -accelerationDiff : 0;
 		handleMovement(throttle, horizontalInput, verticalInput);
-		CanvasManager.getInstance().updateStallDisplayText(isStall);
 	}
 
 	void handleMovement(float throttle, float horizontalInput, float verticalInput) {
@@ -126,5 +125,9 @@ public class AircraftController : MonoBehaviour {
 
 	public void setControllable(bool option) {
 		isControllable = option;
+	}
+
+	public bool isInStall() {
+		return isStall;
 	}
 }
