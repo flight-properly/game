@@ -30,6 +30,12 @@ public class GameManager : MonoBehaviour {
 	private GameObject stallUI;
 	[SerializeField]
 	private GameObject countdownUI;
+	[SerializeField]
+	private GameObject clickSound;
+	[SerializeField]
+	private GameObject stallSound;
+
+	private AudioSource stallAudioSource;
 
 	public static GameManager getInstance() {
 		return instance ?? FindObjectOfType<GameManager>();
@@ -41,6 +47,7 @@ public class GameManager : MonoBehaviour {
 		gameOverUI.SetActive(false);
 		pauseUI.SetActive(isPaused);
 		stallUI.SetActive(false);
+		stallAudioSource = stallSound.GetComponent<AudioSource>();
 		CanvasManager.getInstance().updateTotalRingsText(totalRingsCount);
 		Debug.Log("totalRingsCount: " + totalRingsCount);
 	}
@@ -50,7 +57,6 @@ public class GameManager : MonoBehaviour {
 		if (state == GameState.IDLE || isPaused) return;
 		if (state == GameState.PREGAME) {
 			CanvasManager.getInstance().updateCountdownUIText(countdown.ToString("0"));
-			Debug.Log(countdown);
 			if (countdown < 0.5) {
 				CanvasManager.getInstance().updateCountdownUIText("Go!");
 			}
@@ -60,6 +66,15 @@ public class GameManager : MonoBehaviour {
 				countdownUI.SetActive(false);
 			}
 			countdown -= Time.deltaTime;
+		}
+
+		bool stall = AircraftController.getInstance().isInStall();
+		stallUI.SetActive(stall);
+		if (stall) {
+			Debug.Log("stall");
+			if (!stallAudioSource.isPlaying) stallAudioSource.Play();
+		} else {
+			stallSound.GetComponent<AudioSource>().Stop();
 		}
 
 		if (state == GameState.RUNNING) {
@@ -81,8 +96,6 @@ public class GameManager : MonoBehaviour {
 
 			CanvasManager.getInstance().updateTimeDisplayText(timeElapsed);
 			CanvasManager.getInstance().updateCurrentRingsText(passedRingsCount);
-			bool stall = AircraftController.getInstance().isInStall();
-			stallUI.SetActive(stall);
 		}
 
 		CanvasManager.getInstance().updateGameStateText(state.ToString());
@@ -92,17 +105,21 @@ public class GameManager : MonoBehaviour {
 		Debug.Log("overGame called with cause: " + cause);
 		toggleUI();
 		gameOverUI.SetActive(true);
+		if (stallAudioSource.isPlaying) {
+			stallUI.SetActive(false);
+			stallAudioSource.Stop();
+		}
 		string desc = "";
 		switch (cause) {
 			case GameOverCause.TIME_OVER:
-				desc = "제한 시간을 초과하였습니다.";
+				desc = "Time Over!";
 				break;
 			case GameOverCause.COMPLETE:
-				desc = "모든 목표를 완료하였습니다.";
+				desc = "Completed!";
 				break;
 		}
 
-		CanvasManager.getInstance().updateGameOverUIDescriptionText(desc);
+		CanvasManager.getInstance().updateGameOverUITitleText(desc);
 		AircraftController.getInstance().setControllable(false);
 		state = GameState.IDLE;
 	}
@@ -137,8 +154,18 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void resetGame() {
-		SceneManager.LoadScene(0);
+		StartCoroutine(waitAndLoadScene(SceneManager.GetActiveScene().buildIndex));
 		Debug.Log("game reset");
+	}
+
+	public void backToMainMenu() {
+		StartCoroutine(waitAndLoadScene(SceneManager.GetActiveScene().buildIndex - 1));
+		Debug.Log("back to main");
+	}
+
+	private IEnumerator waitAndLoadScene(int sceneIdx) {
+		yield return new WaitForSeconds(clickSound.GetComponent<AudioSource>().clip.length);
+		SceneManager.LoadScene(sceneIdx);
 	}
 
 	enum GameState {

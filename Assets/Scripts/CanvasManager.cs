@@ -17,7 +17,7 @@ public class CanvasManager : MonoBehaviour {
 	[SerializeField] private Text timeDisplayText;
 	[SerializeField] private Text totalRingsText;
 	[SerializeField] private Text currentRingsText;
-	[SerializeField] private Text gameOverUIDescriptionText;
+	[SerializeField] private Text gameOverUITitleText;
 	[SerializeField] private Text countdownUIText;
 
 	public void updateSpeedMeterText(float speed) {
@@ -44,18 +44,11 @@ public class CanvasManager : MonoBehaviour {
 		currentRingsText.text = passedRingsCount.ToString();
 	}
 
-	public void updateGameOverUIDescriptionText(string text) {
-		gameOverUIDescriptionText.text = text;
+	public void updateGameOverUITitleText(string text) {
+		gameOverUITitleText.text = text;
 	}
 
 	public void updateCountdownUIText(string text) {
 		countdownUIText.text = text;
-	}
-
-	void Start() {
-	}
-
-	void Update() {
-		
 	}
 }
