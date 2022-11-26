@@ -41,19 +41,24 @@ public class AircraftController : MonoBehaviour {
 
 	void FixedUpdate() {
 		if (!isControllable) return;
-		float horizontalInput = Input.GetAxis("Horizontal");
-		float verticalInput = Input.GetAxis("Vertical");
+		float pitch, yaw, roll, throttle;
+		if (SocketManager.getInstance().isReady()) {
+			pitch = SocketManager.getInstance().getPitchValue();
+			yaw = SocketManager.getInstance().getYawValue();
+			roll = SocketManager.getInstance().getRollValue();
+		} else {
+			pitch = Input.GetAxis("Vertical");
+			yaw = Input.GetAxis("Horizontal");
+			roll = -Input.GetAxis("Horizontal");
+		}
 		bool acceleration = Input.GetKey(KeyCode.Period);
 		bool deceleration = Input.GetKey(KeyCode.Comma);
 		throttle = acceleration ? +accelerationDiff : deceleration ? -accelerationDiff : 0;
-		handleMovement(throttle, horizontalInput, verticalInput);
+		Debug.Log("pitch: " + pitch + ", yaw: " + yaw + ", roll: " + roll + ", throttle: " + throttle);
+		handleMovement(pitch * pitchSensitivity, yaw * yawSensitivity, roll * rollSensitivity, throttle);
 	}
 
-	void handleMovement(float throttle, float horizontalInput, float verticalInput) {
-		// Rotation
-		float pitch = verticalInput * pitchSensitivity;
-		float yaw = horizontalInput * yawSensitivity;
-		float roll = -horizontalInput * rollSensitivity;
+	void handleMovement(float pitch, float yaw, float roll, float throttle) {
 		Vector3 toRotate = new Vector3(pitch, yaw, roll);
 
 		// Stall

@@ -71,7 +71,6 @@ public class GameManager : MonoBehaviour {
 		bool stall = AircraftController.getInstance().isInStall();
 		stallUI.SetActive(stall);
 		if (stall) {
-			Debug.Log("stall");
 			if (!stallAudioSource.isPlaying) stallAudioSource.Play();
 		} else {
 			stallSound.GetComponent<AudioSource>().Stop();
