@@ -60,6 +60,12 @@ public class GameManager : MonoBehaviour
 
 	void Update()
 	{
+		if (Input.GetKeyDown(KeyCode.Escape) && state == GameState.RUNNING)
+		{
+			if (isPaused) resumeGame(GamePauseCause.USER);
+			else pauseGame(GamePauseCause.USER);
+		}
+		if (state == GameState.IDLE || isPaused) return;
 		if (!SocketManager.getInstance().getStatus() && state == GameState.RUNNING)
 		{
 			handsRecognized = false;
@@ -70,21 +76,8 @@ public class GameManager : MonoBehaviour
 			handsRecognized = true;
 			resumeGame(GamePauseCause.GAME);
 		}
-		if (Input.GetKeyDown(KeyCode.Escape) && state == GameState.RUNNING)
-		{
-			if (isPaused)
-			{
-				resumeGame(GamePauseCause.USER);
-				Debug.Log("resume");
-			}
-			else
-			{
-				pauseGame(GamePauseCause.USER);
-				Debug.Log("pause");
-			}
-		};
-		if (state == GameState.IDLE || isPaused || !handsRecognized) return;
-		if (state == GameState.PREGAME && (SocketManager.getInstance().getStatus()))
+		if (!handsRecognized) return;
+		if (state == GameState.PREGAME)
 		{
 			CanvasManager.getInstance().updateCountdownUIText(countdown.ToString("0"));
 			if (countdown < 0.5)
@@ -141,11 +134,7 @@ public class GameManager : MonoBehaviour
 		Debug.Log("overGame called with cause: " + cause);
 		toggleUI();
 		gameOverUI.SetActive(true);
-		if (stallAudioSource.isPlaying)
-		{
-			stallUI.SetActive(false);
-			stallAudioSource.Stop();
-		}
+		stopAllAudioSources();
 		string desc = "";
 		switch (cause)
 		{
@@ -174,6 +163,8 @@ public class GameManager : MonoBehaviour
 		{
 			detectionWarningUI.SetActive(true);
 		}
+
+		stopAllAudioSources();
 		Time.timeScale = 0f;
 	}
 
@@ -189,6 +180,7 @@ public class GameManager : MonoBehaviour
 		{
 			detectionWarningUI.SetActive(false);
 		}
+
 		Time.timeScale = 1f;
 	}
 
@@ -235,6 +227,12 @@ public class GameManager : MonoBehaviour
 	{
 		yield return new WaitForSeconds(clickSound.GetComponent<AudioSource>().clip.length);
 		SceneManager.LoadScene(sceneIdx);
+	}
+
+	private void stopAllAudioSources()
+	{
+		AudioSource[] audioSources = FindObjectsOfType(typeof(AudioSource)) as AudioSource[];
+		foreach (AudioSource source in audioSources) source.Stop();
 	}
 
 	enum GameState
