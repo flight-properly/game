@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof (Rigidbody))]
-public class AircraftController : MonoBehaviour {
+[RequireComponent(typeof(Rigidbody))]
+public class AircraftController : MonoBehaviour
+{
 
 	public Rigidbody aircraftRigidbody;
 	public float minSpeed = 10.0f;
@@ -19,69 +20,99 @@ public class AircraftController : MonoBehaviour {
 	public float accelerationDiff = 20.0f;
 	// +: Acceleration, 0: None, -: Deceleration
 	public float throttle = 0.0f;
+	public GameObject engineSound;
+	public bool isDebug = false;
 
 	private Vector3 currentRotation;
 	private bool isStall = false;
 	private Transform boosterObject;
-	private Vector3 defaultSpawnPoint = new Vector3(500, 110, 500);
+	private Vector3 defaultSpawnPoint = new Vector3(500, 250, 500);
 	private bool isControllable = false;
+	private AudioSource engineAudioSource;
 
 	private static AircraftController instance;
 
-	public static AircraftController getInstance() {
+	public static AircraftController getInstance()
+	{
 		return instance ?? FindObjectOfType<AircraftController>();
 	}
 
-	void Start() {
+	void Start()
+	{
 		aircraftRigidbody = GetComponent<Rigidbody>();
 		boosterObject = transform.Find("Booster");
 		if (boosterObject == null) Debug.LogError("Could not find booster object.");
 		boosterObject.gameObject.SetActive(false);
+		engineAudioSource = engineSound.GetComponent<AudioSource>();
 	}
 
-	void FixedUpdate() {
-		if (!isControllable) return;
-		float pitch, yaw, roll, throttle;
-		if (SocketManager.getInstance().isReady()) {
+	void FixedUpdate()
+	{
+		if (!isControllable)
+		{
+			if (engineAudioSource.isPlaying) engineAudioSource.Stop();
+			return;
+		}
+		float pitch, yaw, roll;
+		bool acceleration, deceleration;
+		if (SocketManager.getInstance().isReady())
+		{
+			Debug.Log("Socket is ready. Using CV inputs.");
 			pitch = SocketManager.getInstance().getPitchValue();
 			yaw = SocketManager.getInstance().getYawValue();
 			roll = SocketManager.getInstance().getRollValue();
-		} else {
+			acceleration = SocketManager.getInstance().getThrottleValue() == 1;
+		}
+		else
+		{
+			Debug.Log("Socket is unavailable. Using legacy inputs.");
 			pitch = Input.GetAxis("Vertical");
 			yaw = Input.GetAxis("Horizontal");
 			roll = -Input.GetAxis("Horizontal");
+			acceleration = Input.GetKey(KeyCode.Period);
+			deceleration = Input.GetKey(KeyCode.Comma);
 		}
-		bool acceleration = Input.GetKey(KeyCode.Period);
-		bool deceleration = Input.GetKey(KeyCode.Comma);
-		throttle = acceleration ? +accelerationDiff : deceleration ? -accelerationDiff : 0;
-		Debug.Log("pitch: " + pitch + ", yaw: " + yaw + ", roll: " + roll + ", throttle: " + throttle);
+		throttle = acceleration ? +accelerationDiff : 0;
+		if (throttle != 0)
+		{
+			if (!engineAudioSource.isPlaying) engineAudioSource.Play();
+		}
+		else
+		{
+			engineAudioSource.Stop();
+		}
+		// Debug.Log("status: " + SocketManager.getInstance().getStatus() + ", pitch: " + pitch + ", yaw: " + yaw + ", roll: " + roll + ", throttle: " + throttle);
 		handleMovement(pitch * pitchSensitivity, yaw * yawSensitivity, roll * rollSensitivity, throttle);
 	}
 
-	void handleMovement(float pitch, float yaw, float roll, float throttle) {
+	void handleMovement(float pitch, float yaw, float roll, float throttle)
+	{
 		Vector3 toRotate = new Vector3(pitch, yaw, roll);
 
 		// Stall
-		if (currentSpeed <= stallSpeed) {
+		if (currentSpeed <= stallSpeed)
+		{
 			isStall = true;
 			// 지면 방향 향하는 rotation 값
 			Quaternion targetRotation = Quaternion.Euler(90, transform.eulerAngles.y, transform.eulerAngles.z);
 			// 현재 rotation 값과 targetRotation값의 차이
 			// cf. https://forum.unity.com/threads/subtracting-quaternions.317649/
 			Quaternion quaternionDiff = targetRotation * Quaternion.Inverse(transform.rotation);
-			
+
 			// 쿼터니언 값을 벡터로 변환
 			Vector3 vectorDiff = quaternionDiff.eulerAngles;
 
 			// 보정
-			if(vectorDiff.x > 180) vectorDiff.x -= 360;
-			if(vectorDiff.y > 180) vectorDiff.y -= 360;
-			if(vectorDiff.z > 180) vectorDiff.z -= 360;
+			if (vectorDiff.x > 180) vectorDiff.x -= 360;
+			if (vectorDiff.y > 180) vectorDiff.y -= 360;
+			if (vectorDiff.z > 180) vectorDiff.z -= 360;
 			vectorDiff.x = Mathf.Clamp(vectorDiff.x, -pitchSensitivity, pitchSensitivity);
 			vectorDiff.y = Mathf.Clamp(vectorDiff.y, -yawSensitivity, yawSensitivity);
 			vectorDiff.z = Mathf.Clamp(vectorDiff.z, -rollSensitivity, rollSensitivity);
 			toRotate = vectorDiff;
-		} else {
+		}
+		else
+		{
 			isStall = false;
 		}
 
@@ -114,7 +145,8 @@ public class AircraftController : MonoBehaviour {
 	}
 
 	// 충돌 감지
-	private void OnCollisionEnter(Collision target) {
+	private void OnCollisionEnter(Collision target)
+	{
 		if (!GameManager.getInstance().isGameRunning()) return;
 		Debug.Log("OnCollisionEnter: " + target.gameObject.name);
 		// Reset player position
@@ -128,11 +160,13 @@ public class AircraftController : MonoBehaviour {
 		aircraftRigidbody.velocity = Vector3.zero;
 	}
 
-	public void setControllable(bool option) {
+	public void setControllable(bool option)
+	{
 		isControllable = option;
 	}
 
-	public bool isInStall() {
+	public bool isInStall()
+	{
 		return isStall;
 	}
 }

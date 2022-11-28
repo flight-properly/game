@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class GameManager : MonoBehaviour {
+public class GameManager : MonoBehaviour
+{
 
 	public float timeLimit = 30;
 
@@ -15,15 +16,16 @@ public class GameManager : MonoBehaviour {
 	private int passedRingsCount = 0;
 	private float timeElapsed = 0;
 	private float countdown = 3.0f;
-
-	[Header("Pause")]
-	[SerializeField]
-	private bool isPaused = false;
 	private bool showUI = true;
+	private bool isPaused = false;
+	private bool handsRecognized = true;
+
 	[SerializeField]
 	private GameObject[] shouldHideObjects;
 	[SerializeField]
 	private GameObject pauseUI;
+	[SerializeField]
+	private GameObject detectionWarningUI;
 	[SerializeField]
 	private GameObject gameOverUI;
 	[SerializeField]
@@ -37,30 +39,60 @@ public class GameManager : MonoBehaviour {
 
 	private AudioSource stallAudioSource;
 
-	public static GameManager getInstance() {
+	public static GameManager getInstance()
+	{
 		return instance ?? FindObjectOfType<GameManager>();
 	}
 
-	void Start() {
+	void Start()
+	{
 		state = GameState.PREGAME;
 		totalRingsCount = registeredRings.Length;
 		gameOverUI.SetActive(false);
 		pauseUI.SetActive(isPaused);
+		detectionWarningUI.SetActive(false);
 		stallUI.SetActive(false);
 		stallAudioSource = stallSound.GetComponent<AudioSource>();
 		CanvasManager.getInstance().updateTotalRingsText(totalRingsCount);
+		CanvasManager.getInstance().updateCountdownUIText(countdown.ToString("0"));
 		Debug.Log("totalRingsCount: " + totalRingsCount);
 	}
 
-	void Update() {
-		if (Input.GetKeyDown(KeyCode.Escape) && state == GameState.RUNNING) toggleGamePause();
-		if (state == GameState.IDLE || isPaused) return;
-		if (state == GameState.PREGAME) {
+	void Update()
+	{
+		if (!SocketManager.getInstance().getStatus() && state == GameState.RUNNING)
+		{
+			handsRecognized = false;
+			pauseGame(GamePauseCause.GAME);
+		}
+		else
+		{
+			handsRecognized = true;
+			resumeGame(GamePauseCause.GAME);
+		}
+		if (Input.GetKeyDown(KeyCode.Escape) && state == GameState.RUNNING)
+		{
+			if (isPaused)
+			{
+				resumeGame(GamePauseCause.USER);
+				Debug.Log("resume");
+			}
+			else
+			{
+				pauseGame(GamePauseCause.USER);
+				Debug.Log("pause");
+			}
+		};
+		if (state == GameState.IDLE || isPaused || !handsRecognized) return;
+		if (state == GameState.PREGAME && (SocketManager.getInstance().getStatus()))
+		{
 			CanvasManager.getInstance().updateCountdownUIText(countdown.ToString("0"));
-			if (countdown < 0.5) {
+			if (countdown < 0.5)
+			{
 				CanvasManager.getInstance().updateCountdownUIText("Go!");
 			}
-			if (countdown < 0) {
+			if (countdown < 0)
+			{
 				state = GameState.RUNNING;
 				AircraftController.getInstance().setControllable(true);
 				countdownUI.SetActive(false);
@@ -70,13 +102,17 @@ public class GameManager : MonoBehaviour {
 
 		bool stall = AircraftController.getInstance().isInStall();
 		stallUI.SetActive(stall);
-		if (stall) {
+		if (stall)
+		{
 			if (!stallAudioSource.isPlaying) stallAudioSource.Play();
-		} else {
-			stallSound.GetComponent<AudioSource>().Stop();
+		}
+		else
+		{
+			stallAudioSource.Stop();
 		}
 
-		if (state == GameState.RUNNING) {
+		if (state == GameState.RUNNING)
+		{
 			// 다음에 통과해야 할 Ring 색상 변경
 			MeshRenderer nextRingRenderer = registeredRings[passedRingsCount].GetComponentInChildren<MeshRenderer>();
 			Color toChange = Color.red;
@@ -100,16 +136,19 @@ public class GameManager : MonoBehaviour {
 		CanvasManager.getInstance().updateGameStateText(state.ToString());
 	}
 
-	void overGame(GameOverCause cause) {
+	void overGame(GameOverCause cause)
+	{
 		Debug.Log("overGame called with cause: " + cause);
 		toggleUI();
 		gameOverUI.SetActive(true);
-		if (stallAudioSource.isPlaying) {
+		if (stallAudioSource.isPlaying)
+		{
 			stallUI.SetActive(false);
 			stallAudioSource.Stop();
 		}
 		string desc = "";
-		switch (cause) {
+		switch (cause)
+		{
 			case GameOverCause.TIME_OVER:
 				desc = "Time Over!";
 				break;
@@ -123,58 +162,97 @@ public class GameManager : MonoBehaviour {
 		state = GameState.IDLE;
 	}
 
-	void toggleGamePause() {
-		isPaused = !isPaused;
-		toggleUI();
-		pauseUI.SetActive(isPaused);
-		Time.timeScale = isPaused ? 0f : 1f;
+	void pauseGame(GamePauseCause cause)
+	{
+		if (!isPaused && cause == GamePauseCause.USER)
+		{
+			isPaused = true;
+			toggleUI();
+			pauseUI.SetActive(true);
+		}
+		else if (!handsRecognized && cause == GamePauseCause.GAME)
+		{
+			detectionWarningUI.SetActive(true);
+		}
+		Time.timeScale = 0f;
 	}
 
-	void toggleUI() {
+	void resumeGame(GamePauseCause cause)
+	{
+		if (isPaused && cause == GamePauseCause.USER)
+		{
+			isPaused = false;
+			toggleUI();
+			pauseUI.SetActive(false);
+		}
+		else if (handsRecognized && cause == GamePauseCause.GAME)
+		{
+			detectionWarningUI.SetActive(false);
+		}
+		Time.timeScale = 1f;
+	}
+
+	void toggleUI()
+	{
 		showUI = !showUI;
-		foreach(GameObject obj in shouldHideObjects) obj.SetActive(showUI);
+		foreach (GameObject obj in shouldHideObjects) obj.SetActive(showUI);
 	}
 
-	public Vector3 getLatestRingPosition() {
+	public Vector3 getLatestRingPosition()
+	{
 		return passedRingsCount > 0 ? registeredRings[passedRingsCount - 1].transform.position : Vector3.zero;
 	}
 
-	public int getPassedRingsCount() {
+	public int getPassedRingsCount()
+	{
 		return passedRingsCount;
 	}
 
-	public int getTotalRingsCount() {
+	public int getTotalRingsCount()
+	{
 		Debug.Log("getTotalRingsCount called" + totalRingsCount);
 		return totalRingsCount;
 	}
 
-	public bool isGameRunning() {
+	public bool isGameRunning()
+	{
 		return state == GameState.RUNNING;
 	}
 
-	public void resetGame() {
+	public void resetGame()
+	{
 		StartCoroutine(waitAndLoadScene(SceneManager.GetActiveScene().buildIndex));
 		Debug.Log("game reset");
 	}
 
-	public void backToMainMenu() {
+	public void backToMainMenu()
+	{
 		StartCoroutine(waitAndLoadScene(SceneManager.GetActiveScene().buildIndex - 1));
 		Debug.Log("back to main");
 	}
 
-	private IEnumerator waitAndLoadScene(int sceneIdx) {
+	private IEnumerator waitAndLoadScene(int sceneIdx)
+	{
 		yield return new WaitForSeconds(clickSound.GetComponent<AudioSource>().clip.length);
 		SceneManager.LoadScene(sceneIdx);
 	}
 
-	enum GameState {
+	enum GameState
+	{
 		PREGAME,
 		IDLE,
 		RUNNING,
 	}
 
-	enum GameOverCause {
+	enum GameOverCause
+	{
 		TIME_OVER,
 		COMPLETE,
+	}
+
+	enum GamePauseCause
+	{
+		USER,
+		GAME
 	}
 }

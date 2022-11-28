@@ -1,13 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using System.Text.Json;
 using System.Net.Sockets;
 using System.IO;
 using System;
 using UnityEngine;
 
-public class SocketManager : MonoBehaviour {
+public class SocketManager : MonoBehaviour
+{
 
 	private static SocketManager instance;
 
@@ -19,81 +19,116 @@ public class SocketManager : MonoBehaviour {
 	bool ready = false;
 	NetworkStream stream;
 
+	bool status;
 	float pitch;
 	float roll;
 	float yaw;
 	int throttle;
 
-	public static SocketManager getInstance() {
+	public static SocketManager getInstance()
+	{
 		return instance ?? FindObjectOfType<SocketManager>();
 	}
 
-	void Start() {
+	void Awake()
+	{
+		DontDestroyOnLoad(this.gameObject);
+	}
+
+	void Start()
+	{
 		connect();
 	}
 
-	void Update() {
+	void Update()
+	{
 		if (!ready) return;
 
-		if (stream.DataAvailable) {
+		if (stream.DataAvailable)
+		{
 			byte[] recvBuffer = new byte[client.ReceiveBufferSize];
 			int bytesRead = stream.Read(recvBuffer, 0, client.ReceiveBufferSize);
 			string raw = Encoding.UTF8.GetString(recvBuffer, 0, bytesRead);
-			SocketData data = JsonSerializer.Deserialize<SocketData>(raw);
+			SocketData data = JsonUtility.FromJson<SocketData>(raw);
+			status = data.status;
 			pitch = data.pitch;
-			// roll = data.roll;
-			// yaw = data.yaw;
-			// throttle = data.throttle;
+			roll = data.roll;
+			yaw = data.yaw;
+			throttle = data.throttle;
 		}
 	}
 
-	void connect() {
+	void connect()
+	{
 		if (ready) return;
-		
-		try {
+
+		try
+		{
 			client = new TcpClient(host, port);
 
-			if (client.Connected) {
+			if (client.Connected)
+			{
 				stream = client.GetStream();
 				Debug.Log("Connected to the server.");
 				ready = true;
 			}
-		} catch (Exception e) {
+		}
+		catch (Exception e)
+		{
 			Debug.LogError("Failed to connect to the server: " + e);
 		}
 	}
- 
-	void OnApplicationQuit() {
-		close();	
+
+	void OnApplicationQuit()
+	{
+		close();
 	}
 
-	void close() {
+	void close()
+	{
 		if (!ready) return;
 		reader.Close();
 		client.Close();
 		ready = false;
 	}
 
-	public bool isReady() {
+	public bool isReady()
+	{
 		return ready;
 	}
 
-	public float getPitchValue() {
+	public bool getStatus()
+	{
+		return status;
+	}
+
+	public float getPitchValue()
+	{
 		return pitch;
 	}
-	
-	public float getRollValue() {
+
+	public float getRollValue()
+	{
 		return roll;
 	}
 
-	public float getYawValue() {
+	public float getYawValue()
+	{
 		return yaw;
 	}
 
-	public class SocketData {
-		public float pitch { get; set; }
-		public float roll { get; set; }
-		public float yaw { get; set; }
-		public int throttle { get; set; }
+	public int getThrottleValue()
+	{
+		return throttle;
+	}
+
+	[System.Serializable]
+	public class SocketData
+	{
+		public bool status;
+		public float pitch;
+		public float roll;
+		public float yaw;
+		public int throttle;
 	}
 }
