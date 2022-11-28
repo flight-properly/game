@@ -46,6 +46,15 @@ public class AircraftController : MonoBehaviour
 		engineAudioSource = engineSound.GetComponent<AudioSource>();
 	}
 
+	void Update()
+	{
+		if (Input.GetKeyDown(KeyCode.R) && GameManager.getInstance().isGameRunning())
+		{
+			Debug.Log("respawn called");
+			respawnVehicle();
+		}
+	}
+
 	void FixedUpdate()
 	{
 		if (!isControllable)
@@ -57,7 +66,6 @@ public class AircraftController : MonoBehaviour
 		bool acceleration, deceleration;
 		if (SocketManager.getInstance().isReady())
 		{
-			Debug.Log("Socket is ready. Using CV inputs.");
 			pitch = SocketManager.getInstance().getPitchValue();
 			yaw = SocketManager.getInstance().getYawValue();
 			roll = SocketManager.getInstance().getRollValue();
@@ -65,7 +73,6 @@ public class AircraftController : MonoBehaviour
 		}
 		else
 		{
-			Debug.Log("Socket is unavailable. Using legacy inputs.");
 			pitch = Input.GetAxis("Vertical");
 			yaw = Input.GetAxis("Horizontal");
 			roll = -Input.GetAxis("Horizontal");
@@ -147,8 +154,13 @@ public class AircraftController : MonoBehaviour
 	// 충돌 감지
 	private void OnCollisionEnter(Collision target)
 	{
-		if (!GameManager.getInstance().isGameRunning()) return;
 		Debug.Log("OnCollisionEnter: " + target.gameObject.name);
+		respawnVehicle();
+	}
+
+	private void respawnVehicle()
+	{
+		if (!GameManager.getInstance().isGameRunning()) return;
 		// Reset player position
 		int passedRingsCount = GameManager.getInstance().getPassedRingsCount();
 		Vector3 latestRingPosition = GameManager.getInstance().getLatestRingPosition();

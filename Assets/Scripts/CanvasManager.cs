@@ -49,7 +49,7 @@ public class CanvasManager : MonoBehaviour
 
 	public void updateCurrentRingsText(int passedRingsCount)
 	{
-		currentRingsText.text = passedRingsCount.ToString();
+		currentRingsText.text = passedRingsCount.ToString("00");
 	}
 
 	public void updateGameOverUITitleText(string text)
